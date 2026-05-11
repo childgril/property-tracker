@@ -270,13 +270,18 @@ function totalRent(p){
 function currentOwners(p){
   // 回傳目前所有權人陣列 [{name, share}]
   // 優先順序:
-  //  1) 最新一筆交易的 newOwners (因為 tx 同時定義「變更後狀態」)
-  //  2) 舊資料的 ownerHistory(取最新日期那組)
-  //  3) p.owner 欄位
+  //  1) 最新一筆「非 initial」交易的 newOwners
+  //  2) initial 紀錄(初始登記)的 newOwners
+  //  3) 舊資料的 ownerHistory
+  //  4) p.owner 欄位
   const txs = [...(p.transactions||[])].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
-  const latestTxWithOwners = txs.find(t=>(t.newOwners||[]).some(o=>o.name));
-  if(latestTxWithOwners){
-    return (latestTxWithOwners.newOwners||[]).filter(o=>o.name).map(o=>({name:o.name, share:o.share}));
+  const realTx = txs.find(t=>t.type!=='initial' && (t.newOwners||[]).some(o=>o.name));
+  if(realTx){
+    return (realTx.newOwners||[]).filter(o=>o.name).map(o=>({name:o.name, share:o.share}));
+  }
+  const initialTx = txs.find(t=>t.type==='initial' && (t.newOwners||[]).some(o=>o.name));
+  if(initialTx){
+    return (initialTx.newOwners||[]).filter(o=>o.name).map(o=>({name:o.name, share:o.share}));
   }
   // 退回到 ownerHistory(舊資料相容)
   const hist = (p.ownerHistory||[]).filter(h=>!h.auto); // 非自動產生的舊資料
@@ -617,7 +622,7 @@ function renderConsolidatedTable(allGroups){
 
 // 取得最新的變更備註(用於總表「備註」欄)
 function latestChangeNote(p){
-  const txs = [...(p.transactions||[])].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  const txs = [...(p.transactions||[])].filter(t=>t.type!=='initial').sort((a,b)=>(b.date||'').localeCompare(a.date||''));
   if(txs.length){
     const t = txs[0];
     const dateTW = t.date ? toTWDate(t.date) : '';
@@ -672,7 +677,10 @@ function renderGroup(group){
 function renderTransactions(main){
   const rows = [];
   (DB.properties||[]).forEach(p=>{
-    (p.transactions||[]).forEach(t=>rows.push({...t, propId:p.id, propName:p.name, propType:p.type}));
+    (p.transactions||[]).forEach(t=>{
+      if(t.type==='initial') return; // 初始登記不算交易
+      rows.push({...t, propId:p.id, propName:p.name, propType:p.type});
+    });
   });
   rows.sort((a,b)=>(b.date||'').localeCompare(a.date||''));
   main.innerHTML = `
@@ -690,7 +698,7 @@ function renderTransactions(main){
           const f = t.fees||{};
           const subtotal = Number(t.price||0)+sumFees(t);
           return `<tr>
-            <td>${esc(t.date||'')}</td>
+            <td>${esc(toTWDate(t.date))}</td>
             <td><a href="#" onclick="event.preventDefault();go('detail',{id:'${t.propId}'})">${esc(t.propName)}</a></td>
             <td>${txTypeLabel(t.type)}</td>
             <td>${esc(t.counterparty||'—')}</td>
@@ -712,7 +720,7 @@ function renderTransactions(main){
 }
 
 function txTypeLabel(t){
-  return {buy:'買進','sell':'賣出','gift-in':'受贈','gift-out':'贈與出','transfer-in':'移轉入','transfer-out':'移轉出','split':'持分拆','merge':'持分併'}[t]||t;
+  return {initial:'初始登記',buy:'買進','sell':'賣出','gift-in':'受贈','gift-out':'贈與出','transfer-in':'移轉入','transfer-out':'移轉出','inherit':'繼承','split':'持分拆','merge':'持分併'}[t]||t;
 }
 
 // -------- 全部稅金 --------
@@ -739,7 +747,7 @@ function renderTaxes(main){
       ${Object.keys(byYear).length?`<div class="table-wrap"><table>
         <thead><tr><th>年度</th><th class="num">合計</th></tr></thead>
         <tbody>${Object.keys(byYear).sort().reverse().map(y=>`<tr>
-          <td>${y}</td><td class="num">${money(byYear[y])}</td></tr>`).join('')}</tbody>
+          <td>${y?(parseInt(y)-1911)+' (民國)':'未知'}</td><td class="num">${money(byYear[y])}</td></tr>`).join('')}</tbody>
       </table></div>`:'<div class="empty">尚無資料</div>'}
     </div>
     <div class="card">
@@ -747,7 +755,7 @@ function renderTaxes(main){
       ${rows.length?`<div class="table-wrap"><table>
         <thead><tr><th>日期</th><th>權狀</th><th>稅目</th><th>所屬期間</th><th class="num">金額</th><th>備註</th><th></th></tr></thead>
         <tbody>${rows.map(t=>`<tr>
-          <td>${esc(t.date||'')}</td>
+          <td>${esc(toTWDate(t.date))}</td>
           <td><a href="#" onclick="event.preventDefault();go('detail',{id:'${t.propId}'})">${esc(t.propName)}</a></td>
           <td>${taxKindLabel(t.kind)}</td>
           <td>${esc(t.period||'—')}</td>
@@ -785,7 +793,7 @@ function renderRentals(main){
           return `<tr>
             <td><a href="#" onclick="event.preventDefault();go('detail',{id:'${r.propId}'})">${esc(r.propName)}</a></td>
             <td>${esc(r.tenant||'—')}</td>
-            <td>${esc(r.startDate||'')} ~ ${esc(r.endDate||'未定')}</td>
+            <td>${esc(toTWDate(r.startDate))} ~ ${esc(toTWDate(r.endDate)||'未定')}</td>
             <td class="num">${money(r.monthlyRent)}</td>
             <td class="num">${money(r.deposit)}</td>
             <td>${active?'<span class="badge badge-active">合約中</span>':'<span class="badge badge-sold">已結束</span>'}</td>
@@ -874,7 +882,7 @@ function renderDetail(main){
         <div class="kv-item"><div class="kv-label">面積</div><div class="kv-value">${p.area?fmt(p.area,2)+' '+(p.areaUnit||'坪'):'—'}</div></div>
         <div class="kv-item"><div class="kv-label">地目</div><div class="kv-value">${esc(p.zoning||'—')}</div></div>
         <div class="kv-item"><div class="kv-label">目前所有權人</div><div class="kv-value">${esc(currentOwner(p))}</div></div>
-        <div class="kv-item"><div class="kv-label">取得日期</div><div class="kv-value">${esc(p.acquireDate||'—')}</div></div>
+        <div class="kv-item"><div class="kv-label">取得日期</div><div class="kv-value">${esc(toTWDate(p.acquireDate)||'—')}</div></div>
         <div class="kv-item"><div class="kv-label">購置成本</div><div class="kv-value">${money(totalPurchase(p))}</div></div>
         <div class="kv-item"><div class="kv-label">累計稅金</div><div class="kv-value">${money(totalTax(p))}</div></div>
         <div class="kv-item"><div class="kv-label">累計租金</div><div class="kv-value">${money(totalRent(p))}</div></div>
@@ -942,7 +950,7 @@ function renderOwnerHistory(p){
       const txId = first.txId;
       const ownersHtml = rows.map(h=>`<strong>${esc(h.name||'')}</strong> ${h.share?'<span class="text-muted">('+shareText(h.share)+')</span>':'<span class="text-muted">(全部)</span>'}`).join('、');
       return `<tr>
-        <td>${esc(first.date||'')}</td>
+        <td>${esc(toTWDate(first.date))}</td>
         <td>${ownersHtml}</td>
         <td>${esc(first.method||'—')}</td>
         <td style="font-size:11px">${esc(first.notes||'')}</td>
@@ -957,7 +965,7 @@ function renderOwnerHistory(p){
 }
 
 function renderTxList(p){
-  const list = [...(p.transactions||[])].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  const list = [...(p.transactions||[])].filter(t=>t.type!=='initial').sort((a,b)=>(b.date||'').localeCompare(a.date||''));
   if(!list.length) return '<div class="empty">尚無紀錄</div>';
   return `<div class="table-wrap"><table>
     <thead><tr><th>日期</th><th>類型</th><th>對象</th><th>本次持分</th><th>變更後所有權人</th>
@@ -969,7 +977,7 @@ function renderTxList(p){
       const subtotal = Number(t.price||0)+sumFees(t);
       const newOwnersText = (t.newOwners||[]).filter(o=>o.name).map(o=>`${esc(o.name)}${o.share?'('+shareText(o.share)+')':''}`).join('、')||'—';
       return `<tr>
-        <td>${esc(t.date||'')}</td>
+        <td>${esc(toTWDate(t.date))}</td>
         <td>${txTypeLabel(t.type)}</td>
         <td>${esc(t.counterparty||'—')}</td>
         <td>${t.share?shareText(t.share):'—'}</td>
@@ -996,7 +1004,7 @@ function renderTaxList(p){
   return `<div class="table-wrap"><table>
     <thead><tr><th>日期</th><th>稅目</th><th>所屬期間</th><th class="num">金額</th><th>備註</th><th></th></tr></thead>
     <tbody>${list.map(t=>`<tr>
-      <td>${esc(t.date||'')}</td>
+      <td>${esc(toTWDate(t.date))}</td>
       <td>${taxKindLabel(t.kind)}</td>
       <td>${esc(t.period||'—')}</td>
       <td class="num">${money(t.amount)}</td>
@@ -1019,7 +1027,7 @@ function renderRentalList(p){
       <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
         <div>
           <div style="font-weight:700;font-size:14px">${esc(r.tenant||'未填承租人')} ${active?'<span class="badge badge-active">合約中</span>':'<span class="badge badge-sold">已結束</span>'}</div>
-          <div style="font-size:12px;color:var(--muted);margin-top:2px">租期: ${esc(r.startDate||'')} ~ ${esc(r.endDate||'未定')}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">租期: ${esc(toTWDate(r.startDate))} ~ ${esc(toTWDate(r.endDate)||'未定')}</div>
         </div>
         <div style="text-align:right">
           <div style="font-size:12px;color:var(--muted)">月租 / 押金</div>
@@ -1043,7 +1051,7 @@ function renderRentalList(p){
         <table style="font-size:12px">
           <thead><tr><th>日期</th><th>所屬月份</th><th class="num">金額</th><th>方式</th><th>備註</th><th></th></tr></thead>
           <tbody>${[...r.payments].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(pm=>`<tr>
-            <td>${esc(pm.date||'')}</td>
+            <td>${esc(toTWDate(pm.date))}</td>
             <td>${esc(pm.forMonth||'—')}</td>
             <td class="num">${money(pm.amount)}</td>
             <td>${esc(pm.method||'—')}</td>
@@ -1104,14 +1112,18 @@ function openPropertyForm(id){
           </select></div>
         <div class="field"><label class="field-label">地目 / 用途</label>
           <input id="f_zoning" value="${esc(p?p.zoning:'')}" placeholder="例如:建、田、旱、林、道、雜..."></div>
-        <div class="field"><label class="field-label">初始所有權人</label>
-          <input id="f_owner" value="${esc(p?p.owner:'')}" placeholder="顯示用,後續變更請從「買賣/移轉紀錄」管理"></div>
         <div class="field full"><label class="field-label">地址 (坐落) — 建物用</label>
           <input id="f_address" value="${esc(p?p.address:'')}" placeholder="例如:延平街148巷2弄10號2樓之2"></div>
         <div class="field"><label class="field-label">取得日期</label>
           <input type="date" id="f_acquire" value="${esc(p?p.acquireDate:'')}"></div>
         <div class="field"><label class="field-label">名稱 / 簡稱</label>
           <input id="f_name" value="${esc(p?p.name:'')}" placeholder="自動產生,可手動覆寫"></div>
+        <div class="field full">
+          <label class="field-label">目前所有權人 / 持分</label>
+          <div class="field-hint">列出此權狀目前登記的所有權人(可多位共有)。若日後有買賣/贈與,請另外從「買賣/移轉紀錄」新增,系統會自動更新所有權人變更歷程。</div>
+          <div id="propOwnersList"></div>
+          <button type="button" class="btn btn-sm" onclick="addPropOwnerRow()" style="margin-top:6px">＋ 新增共有人</button>
+        </div>
         <div class="field full">
           <label class="field-label">不動產組 (同一塊地的土地+建物會合併顯示)</label>
           <div class="field-hint">同一「組」會在「土地建物總表」並排顯示。例如:幾筆土地對應一棟建物</div>
@@ -1153,6 +1165,48 @@ function openPropertyForm(id){
       if(groupSel.value==='__new__') groupNew.focus();
     });
   }
+  // 初始化目前所有權人列
+  let initOwners = [];
+  if(p){
+    // 從現有資料抓:優先 currentOwners(從最新 tx)
+    const cur = currentOwners(p);
+    if(cur.length){
+      initOwners = cur.map(o=>({
+        name: o.name||'',
+        num: o.share?o.share.num:'',
+        den: o.share?o.share.den:''
+      }));
+    } else if(p.owner){
+      initOwners = [{name:p.owner, num:'', den:''}];
+    }
+  }
+  if(!initOwners.length) initOwners = [{name:'', num:'', den:''}];
+  window._propOwners = initOwners;
+  renderPropOwnerRows();
+}
+
+function renderPropOwnerRows(){
+  const list = window._propOwners||[];
+  const html = list.map((o,i)=>`
+    <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
+      <input value="${esc(o.name||'')}" placeholder="姓名" style="flex:2" oninput="window._propOwners[${i}].name=this.value">
+      <input type="number" value="${o.num||''}" placeholder="分子" style="flex:1" oninput="window._propOwners[${i}].num=this.value">
+      <span>/</span>
+      <input type="number" value="${o.den||''}" placeholder="分母" style="flex:1" oninput="window._propOwners[${i}].den=this.value">
+      <button type="button" class="btn btn-sm btn-ghost text-red" onclick="removePropOwnerRow(${i})" ${list.length===1?'disabled':''}>×</button>
+    </div>`).join('');
+  const el = document.getElementById('propOwnersList');
+  if(el) el.innerHTML = html;
+}
+function addPropOwnerRow(){
+  window._propOwners = window._propOwners||[];
+  window._propOwners.push({name:'',num:'',den:''});
+  renderPropOwnerRows();
+}
+function removePropOwnerRow(i){
+  window._propOwners.splice(i,1);
+  if(!window._propOwners.length) window._propOwners.push({name:'',num:'',den:''});
+  renderPropOwnerRows();
 }
 
 function getAllGroups(){
@@ -1198,10 +1252,45 @@ function saveProperty(id){
   p.areaUnit = getVal('f_areaUnit');
   p.year = getNum('f_year');
   p.acquireDate = getVal('f_acquire');
-  p.owner = getVal('f_owner');
   p.group = group || '';
   p.notes = getVal('f_notes');
   p.linkedTo = linkedTo;
+
+  // 處理目前所有權人:寫入 initial 交易紀錄
+  const owners = (window._propOwners||[]).filter(o=>(o.name||'').trim()).map(o=>({
+    name: o.name.trim(),
+    share: (o.num&&o.den)?{num:Number(o.num),den:Number(o.den)}:null
+  }));
+  // 也把第一位寫到 p.owner 做向下相容
+  p.owner = owners.length?owners.map(o=>o.name).join('、'):'';
+
+  // 建立或更新一筆 type:'initial' 的交易紀錄(代表初始登記/取得)
+  p.transactions = p.transactions||[];
+  const initialIdx = p.transactions.findIndex(t=>t.type==='initial');
+  if(owners.length){
+    const initialTx = {
+      id: initialIdx>=0 ? p.transactions[initialIdx].id : 'init_'+p.id,
+      type: 'initial',
+      date: p.acquireDate || '',
+      counterparty: '',
+      share: null,
+      newOwners: owners,
+      fees: {},
+      notes: '初始登記/取得',
+      isInitial: true
+    };
+    if(initialIdx>=0){
+      p.transactions[initialIdx] = initialTx;
+    } else {
+      p.transactions.unshift(initialTx);
+    }
+    syncOwnerHistoryFromTx(p, initialTx);
+  } else if(initialIdx>=0){
+    // 沒填所有權人,清掉之前的 initial 紀錄
+    const oldId = p.transactions[initialIdx].id;
+    p.transactions.splice(initialIdx,1);
+    p.ownerHistory = (p.ownerHistory||[]).filter(h=>h.txId!==oldId);
+  }
 
   // 雙向同步:在對方的 linkedTo 加上或移除自己
   (DB.properties||[]).forEach(other=>{
@@ -1321,8 +1410,10 @@ function openTxForm(propId, txId){
   const t = txId ? (p.transactions||[]).find(x=>x.id===txId) : null;
   const f = (t&&t.fees)||{};
   const share = (t&&t.share)||{num:'',den:''};
-  // 變更後所有權人(支援多人共持)
-  const newOwners = (t&&t.newOwners)||[{name:'',num:'',den:''}];
+  // 變更後所有權人(支援多人共持) — 把儲存的 {name, share:{num,den}} 攤平成 UI 用的 {name,num,den}
+  const newOwners = (t&&t.newOwners&&t.newOwners.length)
+    ? t.newOwners.map(o=>({name:o.name||'', num:(o.share&&o.share.num!=null)?o.share.num:'', den:(o.share&&o.share.den!=null)?o.share.den:''}))
+    : [{name:'',num:'',den:''}];
 
   showModal(`
     <div class="modal-head">
