@@ -123,6 +123,13 @@ input[readonly],input:disabled{background:var(--panel-2);color:var(--ink-soft)}
 .row-actions{white-space:nowrap;text-align:right}
 .row-actions button{margin-left:4px}
 
+/* 合併權狀總表 */
+.consolidated{font-size:12px;border-collapse:collapse;width:100%;min-width:1200px}
+.consolidated th{background:var(--panel-2);border:1px solid var(--line);padding:6px 8px;text-align:center;font-size:11px;letter-spacing:.02em}
+.consolidated td{border:1px solid var(--line-soft);padding:5px 8px;vertical-align:middle;font-size:12px}
+.consolidated tr:hover td{background:rgba(122,82,48,.04)}
+.consolidated a{color:var(--accent);font-weight:600}
+
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);padding:10px 18px;background:var(--ink);color:#fff;border-radius:4px;font-size:13px;box-shadow:0 4px 12px rgba(0,0,0,.3);z-index:200;opacity:0;transition:opacity .25s}
 .toast.show{opacity:1}
 .toast.error{background:var(--red)}
@@ -312,8 +319,8 @@ function activeRental(p){
 // -------- 路由 --------
 const PAGES = [
   { id:'dashboard', label:'總覽', icon:'◈', group:'總覽' },
+  { id:'paired', label:'土地建物總表', icon:'⛯', group:'資產' },
   { id:'properties', label:'權狀清單', icon:'❒', group:'資產' },
-  { id:'paired', label:'土地建物配對', icon:'⛯', group:'資產' },
   { id:'transactions', label:'買賣紀錄', icon:'⇄', group:'紀錄' },
   { id:'taxes', label:'稅金紀錄', icon:'¥', group:'紀錄' },
   { id:'rentals', label:'出租紀錄', icon:'⌂', group:'紀錄' },
@@ -419,22 +426,24 @@ function renderPropertyTable(props){
   if(!props.length) return '<div class="empty">尚無權狀資料,點上方「新增權狀」開始</div>';
   return `<div class="table-wrap"><table>
     <thead><tr>
-      <th>類型</th><th>名稱 / 地址</th><th>地段地號 / 建號</th>
-      <th class="num">面積</th><th>目前所有權人</th><th>持分</th>
-      <th class="num">購置成本</th><th class="num">累計稅金</th>
-      <th>狀態</th><th></th>
+      <th>類型</th><th>年度</th><th>地段</th><th>地號/建號</th>
+      <th class="num">面積</th><th>地目</th><th>地址(建物)</th>
+      <th>所有權人</th><th>持分</th>
+      <th class="num">購置成本</th><th>狀態</th><th></th>
     </tr></thead>
     <tbody>${props.map(p=>{
       const r = activeRental(p);
       return `<tr>
         <td><span class="badge badge-${p.type}">${p.type===TYPE_LAND?'土地':'建物'}</span></td>
-        <td><strong>${esc(p.name||'未命名')}</strong><br><span class="text-muted" style="font-size:11px">${esc(p.address||'')}</span></td>
-        <td>${esc(p.parcelId||'—')}</td>
-        <td class="num">${p.area?fmt(p.area,2)+' '+(p.areaUnit||'坪'):'—'}</td>
+        <td>${p.year?fmt(p.year):'—'}</td>
+        <td>${esc(p.section||'—')}</td>
+        <td><strong>${esc(p.parcelId||'—')}</strong></td>
+        <td class="num">${p.area?fmt(p.area,2):'—'}</td>
+        <td>${esc(p.zoning||'—')}</td>
+        <td style="font-size:12px">${esc(p.address||'—')}</td>
         <td>${esc(currentOwnerNames(p))}</td>
         <td>${esc(currentShareText(p))}</td>
         <td class="num">${money(totalPurchase(p))}</td>
-        <td class="num">${money(totalTax(p))}</td>
         <td>${r?'<span class="badge badge-rented">出租中</span>':'<span class="badge badge-self">自用</span>'}</td>
         <td class="row-actions">
           <button class="btn btn-sm" onclick="go('detail',{id:'${p.id}'})">查看</button>
@@ -484,31 +493,146 @@ function filterProps(f){
 // -------- 配對顯示 --------
 function renderPaired(main){
   const props = DB.properties||[];
-  // 配對:有 linkedTo 的會把土地+建物一起顯示
-  const groups = [];
-  const used = new Set();
+  // 先按 group 分組;沒 group 的依 linkedTo 配對;都沒有的單獨一組
+  const byGroup = {};
+  const noGroup = [];
   props.forEach(p=>{
+    if(p.group){
+      (byGroup[p.group]=byGroup[p.group]||[]).push(p);
+    } else {
+      noGroup.push(p);
+    }
+  });
+  // 沒 group 的用 linkedTo 配
+  const noGroupSet = new Set(noGroup.map(p=>p.id));
+  const linkedGroups = [];
+  const used = new Set();
+  noGroup.forEach(p=>{
     if(used.has(p.id)) return;
-    const linked = (p.linkedTo||[]).map(id=>props.find(x=>x.id===id)).filter(Boolean);
+    const linked = (p.linkedTo||[]).map(id=>props.find(x=>x.id===id)).filter(l=>l && noGroupSet.has(l.id));
     if(linked.length){
       const all = [p, ...linked.filter(l=>!used.has(l.id))];
       all.forEach(x=>used.add(x.id));
-      groups.push(all);
+      linkedGroups.push({name:null, items:all});
     }
   });
-  // 沒配對的單獨一組
-  props.forEach(p=>{ if(!used.has(p.id)) groups.push([p]); });
+  noGroup.forEach(p=>{ if(!used.has(p.id)){ linkedGroups.push({name:null, items:[p]}); used.add(p.id); } });
+
+  // 組合所有組:有命名的群組在前,單獨/連結組在後
+  const allGroups = [];
+  Object.keys(byGroup).sort().forEach(name=>{
+    allGroups.push({name, items: byGroup[name]});
+  });
+  linkedGroups.forEach(g=>allGroups.push(g));
 
   main.innerHTML = `
     ${isViewer()?'<div class="viewer-banner">👀 觀看者模式</div>':''}
     <div class="page-head">
       <div>
-        <div class="page-title">土地建物配對</div>
-        <div class="page-desc">同一不動產的土地與建物權狀合併顯示</div>
+        <div class="page-title">土地建物總表</div>
+        <div class="page-desc">左土地、右建物 合併呈現,可多筆土地配一棟建物</div>
+      </div>
+      <div class="page-actions">
+        ${isOwner()?'<button class="btn btn-primary" onclick="openPropertyForm()">＋ 新增權狀</button>':''}
       </div>
     </div>
-    ${groups.length?groups.map(renderGroup).join(''):'<div class="empty">尚無資料</div>'}
+    ${allGroups.length?renderConsolidatedTable(allGroups):'<div class="empty">尚無資料</div>'}
   `;
+}
+
+// 左右並排式總表 (像紙本權狀清冊)
+function renderConsolidatedTable(allGroups){
+  // 計算每組的全域序號
+  let seq = 0;
+  // 表格欄位:序號 / 年度 / 地段 / 地號 / 面積 / 地目 / 持分 / 所有權人 / 備註 || 年度 / 建號 / 面積 / 地址 / 所有權人 / 買總金額 / 備註
+  const headerLand = `<th>序號</th><th>年度</th><th>地段</th><th>地號</th><th class="num">面積</th><th>地目</th><th>持分</th><th>所有權人</th><th>備註</th>`;
+  const headerBld = `<th>年度</th><th>建號</th><th class="num">面積</th><th>地址 (坐落)</th><th>所有權人</th><th class="num">買總金額</th><th>備註</th>`;
+  // 表頭
+  let html = `<div style="overflow-x:auto"><table class="consolidated">
+    <colgroup>
+      <col style="background:rgba(122,82,48,.03)"><col><col><col><col><col><col><col><col>
+      <col style="background:rgba(44,95,141,.04);border-left:2px solid var(--accent)"><col><col><col><col><col><col>
+    </colgroup>
+    <thead>
+      <tr>
+        <th colspan="9" style="background:#e6efde;color:var(--green);text-align:center;font-size:13px">🟢 土 地 權 狀</th>
+        <th colspan="7" style="background:#e3edf6;color:var(--blue);text-align:center;font-size:13px;border-left:2px solid var(--accent)">🔵 建 物 權 狀</th>
+      </tr>
+      <tr>${headerLand}${headerBld.replace('<th>年度</th>','<th style="border-left:2px solid var(--accent)">年度</th>')}</tr>
+    </thead>
+    <tbody>`;
+
+  allGroups.forEach((g)=>{
+    const lands = g.items.filter(p=>p.type===TYPE_LAND);
+    const blds  = g.items.filter(p=>p.type===TYPE_BUILDING);
+    const maxRows = Math.max(lands.length, blds.length, 1);
+    seq++;
+    // 計算群組總金額(建物欄顯示用)
+    const groupTotal = g.items.reduce((s,p)=>s+totalPurchase(p),0);
+
+    for(let i=0; i<maxRows; i++){
+      const land = lands[i];
+      const bld  = blds[i];
+      const isFirstRow = i===0;
+      // 群組標題行(若有)
+      if(isFirstRow && g.name){
+        html += `<tr style="background:#f9f6ed"><td colspan="16" style="font-weight:700;color:var(--accent);padding:6px 10px;font-size:12px">📁 ${esc(g.name)}</td></tr>`;
+      }
+      html += `<tr style="${isFirstRow?'border-top:2px solid var(--line)':''}">`;
+      // 土地端
+      if(land){
+        html += `
+          <td style="font-weight:600;cursor:pointer" onclick="go('detail',{id:'${land.id}'})">${isFirstRow?seq:''}${lands.length>1?'<sup style="color:var(--muted)">.'+(i+1)+'</sup>':''}</td>
+          <td>${land.year?fmt(land.year):'—'}</td>
+          <td><a href="#" onclick="event.preventDefault();go('detail',{id:'${land.id}'})">${esc(land.section||'—')}</a></td>
+          <td>${esc(land.parcelId||'—')}</td>
+          <td class="num">${land.area?fmt(land.area,2):'—'}</td>
+          <td>${esc(land.zoning||'—')}</td>
+          <td style="font-size:12px">${esc(currentShareText(land))}</td>
+          <td>${esc(currentOwnerNames(land))}</td>
+          <td style="font-size:11px;max-width:180px">${esc(latestChangeNote(land)||land.notes||'')}</td>`;
+      } else {
+        html += `<td>${isFirstRow?seq:''}</td><td colspan="8" class="text-muted" style="font-style:italic;font-size:12px">${isFirstRow?'— 無土地 —':''}</td>`;
+      }
+      // 建物端(第一個 cell 加左邊框)
+      if(bld){
+        html += `
+          <td style="border-left:2px solid var(--accent)">${bld.year?fmt(bld.year):'—'}</td>
+          <td><a href="#" onclick="event.preventDefault();go('detail',{id:'${bld.id}'})">${esc(bld.parcelId||'—')}</a></td>
+          <td class="num">${bld.area?fmt(bld.area,2):'—'}</td>
+          <td style="font-size:12px">${esc(bld.address||'—')}</td>
+          <td>${esc(currentOwnerNames(bld))}</td>
+          <td class="num">${isFirstRow&&groupTotal?money(groupTotal):''}</td>
+          <td style="font-size:11px;max-width:160px">${esc(latestChangeNote(bld)||bld.notes||'')}</td>`;
+      } else {
+        html += `<td colspan="7" style="border-left:2px solid var(--accent)" class="text-muted text-center" style="font-style:italic;font-size:12px">${isFirstRow&&!blds.length?'— 無建物 —':''}</td>`;
+      }
+      html += `</tr>`;
+    }
+  });
+  html += `</tbody></table></div>
+    <div class="field-hint" style="margin-top:8px;padding:0 4px">點地段或建號可進入該權狀詳細頁;序號旁的小編號代表組內第幾筆。</div>`;
+  return html;
+}
+
+// 取得最新的變更備註(用於總表「備註」欄)
+function latestChangeNote(p){
+  const txs = [...(p.transactions||[])].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  if(txs.length){
+    const t = txs[0];
+    const dateTW = t.date ? toTWDate(t.date) : '';
+    const type = txTypeLabel(t.type);
+    const party = t.counterparty?t.counterparty:'';
+    return `${dateTW}${type}${party?' '+party:''}`;
+  }
+  return '';
+}
+function toTWDate(iso){
+  if(!iso) return '';
+  const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(!m) return iso;
+  const y = parseInt(m[1])-1911;
+  return `${y}/${parseInt(m[2])}/${parseInt(m[3])}`;
 }
 
 function renderGroup(group){
@@ -964,39 +1088,55 @@ function openPropertyForm(id){
             <option value="land" ${p&&p.type===TYPE_LAND?'selected':''}>土地</option>
             <option value="building" ${p&&p.type===TYPE_BUILDING?'selected':''}>建物</option>
           </select></div>
-        <div class="field"><label class="field-label">名稱<span class="req">*</span></label>
-          <input id="f_name" value="${esc(p?p.name:'')}" placeholder="例如:大安路土地 / 民生路一樓"></div>
-        <div class="field full"><label class="field-label">地址</label>
-          <input id="f_address" value="${esc(p?p.address:'')}" placeholder="例如:台北市大安區大安路1段100號"></div>
-        <div class="field"><label class="field-label">地段地號 / 建號</label>
-          <input id="f_parcel" value="${esc(p?p.parcelId:'')}" placeholder="例如:大安段二小段1234-5"></div>
-        <div class="field"><label class="field-label">地目</label>
-          <input id="f_zoning" value="${esc(p?p.zoning:'')}" placeholder="例如:建、田、旱、林、雜、原(住宅區/商業區)..."></div>
+        <div class="field"><label class="field-label">取得年度 (民國)</label>
+          <input type="number" id="f_year" value="${p&&p.year!=null?p.year:''}" placeholder="例如:104"></div>
+        <div class="field"><label class="field-label">地段<span class="req">*</span></label>
+          <input id="f_section" value="${esc(p?p.section||p.name||'':'')}" placeholder="例如:林森段、太昌段、石壁段"></div>
+        <div class="field"><label class="field-label" id="f_parcelLabel">地號 / 建號<span class="req">*</span></label>
+          <input id="f_parcel" value="${esc(p?p.parcelId:'')}" placeholder="例如:1650、1738-17、2727"></div>
         <div class="field"><label class="field-label">面積</label>
           <input type="number" step="0.01" id="f_area" value="${p&&p.area!=null?p.area:''}"></div>
         <div class="field"><label class="field-label">面積單位</label>
           <select id="f_areaUnit">
+            <option value="㎡" ${p&&p.areaUnit==='㎡'?'selected':''}>㎡</option>
             <option value="坪" ${p&&p.areaUnit==='坪'?'selected':''}>坪</option>
             <option value="平方公尺" ${p&&p.areaUnit==='平方公尺'?'selected':''}>平方公尺</option>
-            <option value="m²" ${p&&p.areaUnit==='m²'?'selected':''}>m²</option>
           </select></div>
+        <div class="field"><label class="field-label">地目 / 用途</label>
+          <input id="f_zoning" value="${esc(p?p.zoning:'')}" placeholder="例如:建、田、旱、林、道、雜..."></div>
+        <div class="field"><label class="field-label">初始所有權人</label>
+          <input id="f_owner" value="${esc(p?p.owner:'')}" placeholder="顯示用,後續變更請從「買賣/移轉紀錄」管理"></div>
+        <div class="field full"><label class="field-label">地址 (坐落) — 建物用</label>
+          <input id="f_address" value="${esc(p?p.address:'')}" placeholder="例如:延平街148巷2弄10號2樓之2"></div>
         <div class="field"><label class="field-label">取得日期</label>
           <input type="date" id="f_acquire" value="${esc(p?p.acquireDate:'')}"></div>
-        <div class="field"><label class="field-label">初始所有權人</label>
-          <input id="f_owner" value="${esc(p?p.owner:'')}" placeholder="顯示用,實際變更請從「買賣/移轉紀錄」管理"></div>
+        <div class="field"><label class="field-label">名稱 / 簡稱</label>
+          <input id="f_name" value="${esc(p?p.name:'')}" placeholder="自動產生,可手動覆寫"></div>
         <div class="field full">
-          <label class="field-label">關聯權狀 (土地⇄建物配對)</label>
-          <div class="field-hint">勾選同一塊不動產的另一張權狀,系統會合併顯示</div>
-          <div style="max-height:130px;overflow-y:auto;border:1px solid var(--line);padding:6px;border-radius:3px;background:#fff">
+          <label class="field-label">不動產組 (同一塊地的土地+建物會合併顯示)</label>
+          <div class="field-hint">同一「組」會在「土地建物總表」並排顯示。例如:幾筆土地對應一棟建物</div>
+          <div style="display:flex;gap:6px">
+            <select id="f_group" style="flex:1">
+              <option value="">— 不歸組 —</option>
+              ${getAllGroups().map(g=>`<option value="${esc(g)}" ${p&&p.group===g?'selected':''}>${esc(g)}</option>`).join('')}
+              <option value="__new__">＋ 新增分組...</option>
+            </select>
+            <input id="f_groupNew" placeholder="新分組名稱" style="flex:1;display:none">
+          </div>
+        </div>
+        <div class="field full">
+          <label class="field-label">其他關聯權狀 (進階)</label>
+          <div class="field-hint">不在同一組但需要關聯的權狀,可勾選</div>
+          <div style="max-height:120px;overflow-y:auto;border:1px solid var(--line);padding:6px;border-radius:3px;background:#fff">
             ${candidates.length?candidates.map(c=>`
               <label class="checkbox" style="padding:3px 0">
                 <input type="checkbox" name="link" value="${c.id}" ${linkedIds.includes(c.id)?'checked':''}>
-                <span class="badge badge-${c.type}">${c.type===TYPE_LAND?'土地':'建物'}</span> ${esc(c.name)}
+                <span class="badge badge-${c.type}">${c.type===TYPE_LAND?'土地':'建物'}</span> ${esc(c.name||c.section+' '+c.parcelId)}
               </label>`).join(''):'<div class="text-muted" style="font-size:12px">尚無其他權狀</div>'}
           </div>
         </div>
         <div class="field full"><label class="field-label">備註</label>
-          <textarea id="f_notes" placeholder="權狀字號、登記原因、其他說明...">${esc(p?p.notes:'')}</textarea></div>
+          <textarea id="f_notes" placeholder="權狀字號、登記原因、買賣金額、贈與紀錄...">${esc(p?p.notes:'')}</textarea></div>
       </div>
     </div>
     <div class="modal-foot">
@@ -1004,13 +1144,36 @@ function openPropertyForm(id){
       <button class="btn btn-primary" onclick="saveProperty('${p?p.id:''}')">${p?'儲存':'新增'}</button>
     </div>
   `);
+  // 「新增分組」切換邏輯
+  const groupSel = document.getElementById('f_group');
+  const groupNew = document.getElementById('f_groupNew');
+  if(groupSel){
+    groupSel.addEventListener('change', ()=>{
+      groupNew.style.display = groupSel.value==='__new__' ? 'block' : 'none';
+      if(groupSel.value==='__new__') groupNew.focus();
+    });
+  }
+}
+
+function getAllGroups(){
+  const set = new Set();
+  (DB.properties||[]).forEach(p=>{ if(p.group) set.add(p.group); });
+  return Array.from(set).sort();
 }
 
 function saveProperty(id){
-  const name = getVal('f_name').trim();
-  if(!name){ toast('請填名稱','error'); return; }
+  const section = getVal('f_section').trim();
+  const parcel = getVal('f_parcel').trim();
+  if(!section){ toast('請填地段','error'); return; }
+  if(!parcel){ toast('請填地號 / 建號','error'); return; }
   const linkedChecks = document.querySelectorAll('input[name=link]:checked');
   const linkedTo = Array.from(linkedChecks).map(c=>c.value);
+
+  // group 處理
+  let group = getVal('f_group');
+  if(group === '__new__'){
+    group = getVal('f_groupNew').trim();
+  }
 
   let p;
   if(id){
@@ -1024,14 +1187,19 @@ function saveProperty(id){
   const newLinked = new Set(linkedTo);
 
   p.type = getVal('f_type');
-  p.name = name;
+  p.section = section;
+  p.parcelId = parcel;
+  // 名稱若空白,自動以 "地段 地號" 組合
+  const nameInput = getVal('f_name').trim();
+  p.name = nameInput || (section + ' ' + parcel);
   p.address = getVal('f_address');
-  p.parcelId = getVal('f_parcel');
   p.zoning = getVal('f_zoning');
   p.area = getNum('f_area');
   p.areaUnit = getVal('f_areaUnit');
+  p.year = getNum('f_year');
   p.acquireDate = getVal('f_acquire');
   p.owner = getVal('f_owner');
+  p.group = group || '';
   p.notes = getVal('f_notes');
   p.linkedTo = linkedTo;
 

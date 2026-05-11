@@ -1,0 +1,349 @@
+{
+  "properties": [
+    {
+      "id": "p1",
+      "type": "land",
+      "year": 72,
+      "section": "石壁段",
+      "parcelId": "819",
+      "name": "石壁段 819",
+      "area": 1431.73,
+      "areaUnit": "㎡",
+      "zoning": "旱",
+      "owner": "林妙音",
+      "notes": "104/12/25 謝阿尾贈與林妙音",
+      "group": "石壁段 819 系列",
+      "linkedTo": [],
+      "transactions": [
+        {
+          "id": "t1",
+          "type": "gift-in",
+          "date": "2015-12-25",
+          "counterparty": "謝阿尾",
+          "share": null,
+          "newOwners": [{ "name": "林妙音", "share": null }],
+          "fees": {},
+          "notes": "謝阿尾贈與"
+        }
+      ],
+      "ownerHistory": [
+        { "id": "t1_0", "txId": "t1", "date": "2015-12-25", "name": "林妙音", "share": null, "method": "受贈(入)", "notes": "對象:謝阿尾", "auto": true }
+      ],
+      "taxes": [],
+      "rentals": []
+    },
+    {
+      "id": "p2",
+      "type": "land",
+      "year": 72,
+      "section": "石壁段",
+      "parcelId": "819-1",
+      "name": "石壁段 819-1",
+      "area": 137.3,
+      "areaUnit": "㎡",
+      "zoning": "道",
+      "group": "石壁段 819 系列",
+      "linkedTo": [],
+      "transactions": [], "ownerHistory": [], "taxes": [], "rentals": []
+    },
+    {
+      "id": "p3",
+      "type": "land",
+      "year": 72,
+      "section": "石壁段",
+      "parcelId": "819-2",
+      "name": "石壁段 819-2",
+      "area": 82.15,
+      "areaUnit": "㎡",
+      "zoning": "旱",
+      "group": "石壁段 819 系列",
+      "linkedTo": [],
+      "transactions": [], "ownerHistory": [], "taxes": [], "rentals": []
+    },
+    {
+      "id": "p4",
+      "type": "land",
+      "year": 77,
+      "section": "林森段",
+      "parcelId": "1650",
+      "name": "林森段 1650 (林佩樺)",
+      "area": 167,
+      "areaUnit": "㎡",
+      "zoning": "建",
+      "owner": "林佩樺",
+      "notes": "104/12/16 買賣過戶 湯金蓮→林佩樺",
+      "group": "林森段 1650 / 延平街148巷",
+      "linkedTo": [],
+      "transactions": [
+        {
+          "id": "t4",
+          "type": "buy",
+          "date": "2015-12-16",
+          "counterparty": "湯金蓮",
+          "share": { "num": 84, "den": 1000 },
+          "newOwners": [{ "name": "林佩樺", "share": { "num": 84, "den": 1000 } }],
+          "fees": {},
+          "notes": "買賣過戶"
+        }
+      ],
+      "ownerHistory": [
+        { "id": "t4_0", "txId": "t4", "date": "2015-12-16", "name": "林佩樺", "share": { "num": 84, "den": 1000 }, "method": "買進", "notes": "對象:湯金蓮", "auto": true }
+      ],
+      "taxes": [], "rentals": []
+    },
+    {
+      "id": "p4b1", "type": "building", "year": 94, "section": "林森段",
+      "parcelId": "2727", "name": "延平街148巷2弄10號",
+      "area": 33.51, "areaUnit": "㎡", "address": "延平街148巷2弄10號",
+      "owner": "林佩樺", "group": "林森段 1650 / 延平街148巷",
+      "linkedTo": [], "transactions": [], "ownerHistory": [], "taxes": [], "rentals": []
+    },
+    {
+      "id": "p4b2", "type": "building", "year": 94, "section": "林森段",
+      "parcelId": "2731", "name": "延平街148巷2弄10號2樓之2",
+      "area": 22.47, "areaUnit": "㎡", "address": "延平街148巷2弄10號2樓之2",
+      "owner": "林佩樺", "group": "林森段 1650 / 延平街148巷",
+      "linkedTo": [], "transactions": [], "ownerHistory": [], "taxes": [], "rentals": []
+    },
+    {
+      "id": "p4b3", "type": "building", "year": 94, "section": "林森段",
+      "parcelId": "2738", "name": "延平街148巷2弄10號4樓之2",
+      "area": 22.47, "areaUnit": "㎡", "address": "延平街148巷2弄10號4樓之2",
+      "owner": "林佩樺", "group": "林森段 1650 / 延平街148巷",
+      "linkedTo": [], "transactions": [], "ownerHistory": [], "taxes": [], "rentals": []
+    },
+    {
+      "id": "p4b4", "type": "building", "year": 94, "section": "林森段",
+      "parcelId": "2739", "name": "延平街148巷2弄10號4樓之5",
+      "area": 23.43, "areaUnit": "㎡", "address": "延平街148巷2弄10號4樓之5",
+      "owner": "林佩樺", "group": "林森段 1650 / 延平街148巷",
+      "linkedTo": [], "transactions": [], "ownerHistory": [], "taxes": [], "rentals": []
+    },
+    {
+      "id": "p4b5", "type": "building", "year": 94, "section": "林森段",
+      "parcelId": "2740", "name": "延平街148巷2弄10號4樓之3",
+      "area": 22.47, "areaUnit": "㎡", "address": "延平街148巷2弄10號4樓之3",
+      "owner": "林佩樺", "group": "林森段 1650 / 延平街148巷",
+      "linkedTo": [], "transactions": [], "ownerHistory": [], "taxes": [], "rentals": []
+    },
+    {
+      "id": "p4b6", "type": "building", "year": 94, "section": "林森段",
+      "parcelId": "2741", "name": "延平街148巷2弄10號5樓之1",
+      "area": 23.43, "areaUnit": "㎡", "address": "延平街148巷2弄10號5樓之1",
+      "owner": "林佩樺", "group": "林森段 1650 / 延平街148巷",
+      "linkedTo": [], "transactions": [], "ownerHistory": [], "taxes": [], "rentals": []
+    },
+    {
+      "id": "p6", "type": "land", "year": 90, "section": "林森段",
+      "parcelId": "1650", "name": "林森段 1650 (湯金月)",
+      "area": 167, "areaUnit": "㎡", "zoning": "建", "owner": "湯金月",
+      "group": "林森段 1650 (湯金月-2樓之1)",
+      "linkedTo": [], "transactions": [], "ownerHistory": [], "taxes": [], "rentals": []
+    },
+    {
+      "id": "p6b", "type": "building", "year": 90, "section": "林森段",
+      "parcelId": "2730", "name": "延平街148巷2弄10號2樓之1",
+      "area": 23.43, "areaUnit": "㎡", "address": "延平街148巷2弄10號2樓之1",
+      "owner": "湯金月", "group": "林森段 1650 (湯金月-2樓之1)",
+      "linkedTo": [], "transactions": [], "ownerHistory": [], "taxes": [], "rentals": []
+    },
+    {
+      "id": "p7", "type": "land", "year": 78, "section": "林森段",
+      "parcelId": "1686", "name": "林森段 1686", "area": 61,
+      "areaUnit": "㎡", "zoning": "建", "owner": "湯金月",
+      "group": "林森段 1686 / 延平街124號",
+      "linkedTo": [], "transactions": [], "ownerHistory": [], "taxes": [], "rentals": []
+    },
+    {
+      "id": "p7b", "type": "building", "year": 78, "section": "林森段",
+      "parcelId": "859", "name": "延平街124號", "area": 124.88,
+      "areaUnit": "㎡", "address": "延平街124號", "owner": "湯金月",
+      "group": "林森段 1686 / 延平街124號",
+      "linkedTo": [], "transactions": [], "ownerHistory": [], "taxes": [], "rentals": []
+    },
+    {
+      "id": "p8a", "type": "land", "year": 99, "section": "林森段",
+      "parcelId": "965-1", "name": "林森段 965-1", "area": 90,
+      "areaUnit": "㎡", "zoning": "建", "owner": "湯金月",
+      "notes": "104/12/15 湯舜華買賣過戶→湯金月",
+      "group": "林森段 965/964 / 中山路336之1號",
+      "linkedTo": [],
+      "transactions": [
+        { "id": "t8", "type": "buy", "date": "2015-12-15",
+          "counterparty": "湯舜華", "share": null,
+          "newOwners": [{ "name": "湯金月", "share": null }],
+          "fees": {}, "notes": "買賣過戶" }
+      ],
+      "ownerHistory": [
+        { "id": "t8_0", "txId": "t8", "date": "2015-12-15", "name": "湯金月",
+          "share": null, "method": "買進", "notes": "對象:湯舜華", "auto": true }
+      ],
+      "taxes": [], "rentals": []
+    },
+    {
+      "id": "p8a2", "type": "land", "year": 99, "section": "林森段",
+      "parcelId": "964-1", "name": "林森段 964-1", "owner": "湯金月",
+      "group": "林森段 965/964 / 中山路336之1號",
+      "linkedTo": [], "transactions": [], "ownerHistory": [], "taxes": [], "rentals": []
+    },
+    {
+      "id": "p8b", "type": "building", "year": 99, "section": "林森段",
+      "parcelId": "1733", "name": "中山路336之1號", "area": 112,
+      "areaUnit": "㎡", "address": "中山路336之1號", "owner": "林文龍",
+      "notes": "105/11/6 售 3180萬 (帳+200=3380)",
+      "group": "林森段 965/964 / 中山路336之1號",
+      "linkedTo": [],
+      "transactions": [
+        { "id": "t8b", "type": "buy", "date": "", "counterparty": "",
+          "share": null,
+          "newOwners": [{ "name": "林文龍", "share": null }],
+          "price": 36200000, "fees": {}, "notes": "買總金額 3620萬" },
+        { "id": "t8b2", "type": "sell", "date": "2016-11-06", "counterparty": "",
+          "share": null,
+          "newOwners": [],
+          "price": 31800000, "fees": {}, "notes": "售 3180萬,帳+200=3380" }
+      ],
+      "ownerHistory": [
+        { "id": "t8b_0", "txId": "t8b", "name": "林文龍", "share": null, "method": "買進", "auto": true }
+      ],
+      "taxes": [], "rentals": []
+    },
+    {
+      "id": "p9", "type": "land", "year": 80, "section": "太昌段",
+      "parcelId": "190-1", "area": 47, "areaUnit": "㎡", "zoning": "旱",
+      "name": "太昌段 190-1", "owner": "湯金蓮",
+      "notes": "吉安鄉太昌段(道路)", "linkedTo": [],
+      "transactions": [], "ownerHistory": [], "taxes": [], "rentals": []
+    },
+    {
+      "id": "p10", "type": "land", "year": 100, "section": "太昌段",
+      "parcelId": "1738-16", "area": 41, "areaUnit": "㎡", "zoning": "田",
+      "name": "太昌段 1738-16", "owner": "湯金月",
+      "notes": "50萬", "linkedTo": [],
+      "transactions": [
+        { "id": "t10", "type": "buy", "date": "", "counterparty": "",
+          "share": { "num": 1, "den": 1 },
+          "newOwners": [{ "name": "湯金月", "share": { "num":1,"den":1 } }],
+          "price": 500000, "fees": {}, "notes": "" }
+      ],
+      "ownerHistory": [
+        { "id":"t10_0", "txId":"t10", "name":"湯金月", "share":{"num":1,"den":1}, "method":"買進", "auto":true }
+      ],
+      "taxes": [], "rentals": []
+    },
+    {
+      "id": "p11a", "type": "land", "year": 101, "section": "太昌段",
+      "parcelId": "1738-17", "area": 31, "areaUnit": "㎡", "zoning": "田",
+      "name": "太昌段 1738-17", "owner": "湯金月",
+      "group": "太昌段 1738 系列",
+      "linkedTo": [], "transactions": [], "ownerHistory": [], "taxes": [], "rentals": []
+    },
+    {
+      "id": "p11b", "type": "land", "year": 101, "section": "太昌段",
+      "parcelId": "1738-18", "area": 11, "areaUnit": "㎡", "zoning": "田",
+      "name": "太昌段 1738-18", "group": "太昌段 1738 系列",
+      "linkedTo": [], "transactions": [], "ownerHistory": [], "taxes": [], "rentals": []
+    },
+    {
+      "id": "p11c", "type": "land", "year": 101, "section": "太昌段",
+      "parcelId": "1738-19", "area": 2, "areaUnit": "㎡", "zoning": "田",
+      "name": "太昌段 1738-19", "group": "太昌段 1738 系列",
+      "linkedTo": [], "transactions": [], "ownerHistory": [], "taxes": [], "rentals": []
+    },
+    {
+      "id": "p14", "type": "land", "year": 80, "section": "國股段",
+      "parcelId": "550", "area": 455.69, "areaUnit": "㎡", "zoning": "建",
+      "name": "國股段 550", "owner": "湯金月",
+      "linkedTo": [], "transactions": [], "ownerHistory": [], "taxes": [], "rentals": []
+    },
+    {
+      "id": "p15", "type": "land", "year": 82, "section": "國股段",
+      "parcelId": "543", "area": 231.01, "areaUnit": "㎡", "zoning": "旱",
+      "name": "國股段 543", "owner": "湯金月",
+      "linkedTo": [], "transactions": [], "ownerHistory": [], "taxes": [], "rentals": []
+    },
+    {
+      "id": "p16", "type": "land", "year": 80, "section": "樹人段",
+      "parcelId": "629", "area": 470, "areaUnit": "㎡", "zoning": "建",
+      "name": "樹人段 629", "owner": "林文龍",
+      "group": "樹人段 629 / 中美路99-1號",
+      "linkedTo": [], "transactions": [], "ownerHistory": [], "taxes": [], "rentals": []
+    },
+    {
+      "id": "p16b", "type": "building", "year": 100, "section": "樹人段",
+      "parcelId": "1799", "name": "中美路99-1號", "area": 4399.17,
+      "areaUnit": "㎡", "address": "中美路99-1號", "owner": "林文龍",
+      "group": "樹人段 629 / 中美路99-1號",
+      "linkedTo": [], "transactions": [], "ownerHistory": [], "taxes": [], "rentals": []
+    },
+    {
+      "id": "p17", "type": "land", "year": 83, "section": "嘉平段",
+      "parcelId": "354", "area": 121, "areaUnit": "㎡", "zoning": "建",
+      "name": "嘉平段 354", "owner": "慶豐營造",
+      "group": "嘉平段 354 系列",
+      "linkedTo": [], "transactions": [], "ownerHistory": [], "taxes": [], "rentals": []
+    },
+    {
+      "id": "p18", "type": "land", "year": 83, "section": "嘉平段",
+      "parcelId": "354-1", "area": 12, "areaUnit": "㎡", "zoning": "建",
+      "name": "嘉平段 354-1", "owner": "慶豐營造", "notes": "道路",
+      "group": "嘉平段 354 系列",
+      "linkedTo": [], "transactions": [], "ownerHistory": [], "taxes": [], "rentals": []
+    },
+    {
+      "id": "p19", "type": "land", "year": 89, "section": "嘉平段",
+      "parcelId": "371", "area": 6, "areaUnit": "㎡", "zoning": "旱",
+      "name": "嘉平段 371", "owner": "湯金月",
+      "notes": "104/11/20 林裕祥贈與湯金月; 第三間57號-道路",
+      "transactions": [
+        { "id":"t19", "type":"gift-in", "date":"2015-11-20", "counterparty":"林裕祥",
+          "share":null, "newOwners":[{"name":"湯金月","share":null}], "fees":{}, "notes":"" }
+      ],
+      "ownerHistory":[{ "id":"t19_0","txId":"t19","date":"2015-11-20","name":"湯金月","share":null,"method":"受贈(入)","notes":"對象:林裕祥","auto":true }],
+      "linkedTo": [], "taxes": [], "rentals": []
+    },
+    {
+      "id": "p20", "type": "land", "year": 89, "section": "嘉平段",
+      "parcelId": "374", "area": 6, "areaUnit": "㎡", "zoning": "旱",
+      "name": "嘉平段 374", "owner": "湯金月",
+      "notes": "104/11/20 湯金蓮贈與湯金月; 第二間55號-道路",
+      "transactions": [
+        { "id":"t20", "type":"gift-in", "date":"2015-11-20", "counterparty":"湯金蓮",
+          "share":null, "newOwners":[{"name":"湯金月","share":null}], "fees":{}, "notes":"" }
+      ],
+      "ownerHistory":[{ "id":"t20_0","txId":"t20","date":"2015-11-20","name":"湯金月","share":null,"method":"受贈(入)","notes":"對象:湯金蓮","auto":true }],
+      "linkedTo": [], "taxes": [], "rentals": []
+    },
+    {
+      "id": "p21", "type": "land", "year": 89, "section": "嘉平段",
+      "parcelId": "375", "area": 7, "areaUnit": "㎡", "zoning": "旱",
+      "name": "嘉平段 375", "owner": "湯金月",
+      "notes": "104/11/20 張玉妃贈與湯金月; 第一間53號-道路",
+      "transactions": [
+        { "id":"t21", "type":"gift-in", "date":"2015-11-20", "counterparty":"張玉妃",
+          "share":null, "newOwners":[{"name":"湯金月","share":null}], "fees":{}, "notes":"" }
+      ],
+      "ownerHistory":[{ "id":"t21_0","txId":"t21","date":"2015-11-20","name":"湯金月","share":null,"method":"受贈(入)","notes":"對象:張玉妃","auto":true }],
+      "linkedTo": [], "taxes": [], "rentals": []
+    },
+    {
+      "id": "p22", "type": "land", "year": 84, "section": "水源段",
+      "parcelId": "550", "area": 3810.85, "areaUnit": "㎡", "zoning": "旱",
+      "name": "水源段 550", "owner": "張梅娘",
+      "linkedTo": [], "transactions": [], "ownerHistory": [], "taxes": [], "rentals": []
+    },
+    {
+      "id": "p23", "type": "land", "year": 84, "section": "水源段",
+      "parcelId": "556", "area": 4060.25, "areaUnit": "㎡", "zoning": "旱",
+      "name": "水源段 556", "owner": "張梅娘",
+      "linkedTo": [], "transactions": [], "ownerHistory": [], "taxes": [], "rentals": []
+    },
+    {
+      "id": "p24", "type": "land", "year": 84, "section": "水源段",
+      "parcelId": "419", "area": 3312.94, "areaUnit": "㎡", "zoning": "旱",
+      "name": "水源段 419", "owner": "張梅娘",
+      "linkedTo": [], "transactions": [], "ownerHistory": [], "taxes": [], "rentals": []
+    }
+  ],
+  "updatedAt": "2026-05-11T00:00:00.000Z"
+}
