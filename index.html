@@ -260,16 +260,45 @@ function totalRent(p){
   });
   return sum;
 }
+function currentOwners(p){
+  // 回傳目前所有權人陣列 [{name, share}]
+  // 優先順序:
+  //  1) 最新一筆交易的 newOwners (因為 tx 同時定義「變更後狀態」)
+  //  2) 舊資料的 ownerHistory(取最新日期那組)
+  //  3) p.owner 欄位
+  const txs = [...(p.transactions||[])].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  const latestTxWithOwners = txs.find(t=>(t.newOwners||[]).some(o=>o.name));
+  if(latestTxWithOwners){
+    return (latestTxWithOwners.newOwners||[]).filter(o=>o.name).map(o=>({name:o.name, share:o.share}));
+  }
+  // 退回到 ownerHistory(舊資料相容)
+  const hist = (p.ownerHistory||[]).filter(h=>!h.auto); // 非自動產生的舊資料
+  if(hist.length){
+    const sorted = [...hist].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+    const latestDate = sorted[0].date;
+    return sorted.filter(h=>h.date===latestDate).map(o=>({name:o.name, share:o.share}));
+  }
+  if(p.owner) return [{name:p.owner, share:null}];
+  return [];
+}
 function currentOwner(p){
-  // 從 ownerHistory 找出最新的所有權人(們)
-  const hist = p.ownerHistory||[];
-  if(!hist.length) return p.owner || '—';
-  // 依日期排序,取最新
-  const sorted = [...hist].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
-  // 同一日期可能有多筆持分
-  const latestDate = sorted[0].date;
-  const owners = sorted.filter(h=>h.date===latestDate);
-  return owners.map(o=>`${o.name}${o.share?'('+shareText(o.share)+')':''}`).join('、');
+  // 含持分文字的單一字串
+  const list = currentOwners(p);
+  if(!list.length) return '—';
+  return list.map(o=>`${o.name}${o.share?'('+shareText(o.share)+')':''}`).join('、');
+}
+function currentOwnerNames(p){
+  const list = currentOwners(p);
+  if(!list.length) return '—';
+  return list.map(o=>o.name).join('、');
+}
+function currentShareText(p){
+  const list = currentOwners(p);
+  if(!list.length) return '—';
+  // 若所有人都沒寫持分,顯示「全部」
+  const hasShare = list.some(o=>o.share);
+  if(!hasShare) return '全部';
+  return list.map(o=>shareText(o.share)).join('、');
 }
 function activeRental(p){
   const today = todayISO();
@@ -391,7 +420,7 @@ function renderPropertyTable(props){
   return `<div class="table-wrap"><table>
     <thead><tr>
       <th>類型</th><th>名稱 / 地址</th><th>地段地號 / 建號</th>
-      <th class="num">面積</th><th>目前所有權人</th>
+      <th class="num">面積</th><th>目前所有權人</th><th>持分</th>
       <th class="num">購置成本</th><th class="num">累計稅金</th>
       <th>狀態</th><th></th>
     </tr></thead>
@@ -402,7 +431,8 @@ function renderPropertyTable(props){
         <td><strong>${esc(p.name||'未命名')}</strong><br><span class="text-muted" style="font-size:11px">${esc(p.address||'')}</span></td>
         <td>${esc(p.parcelId||'—')}</td>
         <td class="num">${p.area?fmt(p.area,2)+' '+(p.areaUnit||'坪'):'—'}</td>
-        <td>${esc(currentOwner(p))}</td>
+        <td>${esc(currentOwnerNames(p))}</td>
+        <td>${esc(currentShareText(p))}</td>
         <td class="num">${money(totalPurchase(p))}</td>
         <td class="num">${money(totalTax(p))}</td>
         <td>${r?'<span class="badge badge-rented">出租中</span>':'<span class="badge badge-self">自用</span>'}</td>
@@ -498,13 +528,14 @@ function renderGroup(group){
       <div class="kv-item"><div class="kv-label">淨投入</div><div class="kv-value">${money(totalCost+totalTaxG-totalRentG)}</div></div>
     </div>
     <div class="table-wrap" style="margin-top:12px"><table>
-      <thead><tr><th>類型</th><th>名稱</th><th>地段地號/建號</th><th class="num">面積</th><th>所有權人</th><th class="num">成本</th><th class="num">稅金</th><th></th></tr></thead>
+      <thead><tr><th>類型</th><th>名稱</th><th>地段地號/建號</th><th class="num">面積</th><th>所有權人</th><th>持分</th><th class="num">成本</th><th class="num">稅金</th><th></th></tr></thead>
       <tbody>${group.map(p=>`<tr>
         <td><span class="badge badge-${p.type}">${p.type===TYPE_LAND?'土地':'建物'}</span></td>
         <td>${esc(p.name)}</td>
         <td>${esc(p.parcelId||'—')}</td>
         <td class="num">${p.area?fmt(p.area,2)+' '+(p.areaUnit||'坪'):'—'}</td>
-        <td>${esc(currentOwner(p))}</td>
+        <td>${esc(currentOwnerNames(p))}</td>
+        <td>${esc(currentShareText(p))}</td>
         <td class="num">${money(totalPurchase(p))}</td>
         <td class="num">${money(totalTax(p))}</td>
         <td class="row-actions"><button class="btn btn-sm" onclick="go('detail',{id:'${p.id}'})">查看</button></td>
@@ -717,7 +748,7 @@ function renderDetail(main){
       <div class="kv-grid">
         <div class="kv-item"><div class="kv-label">地段地號 / 建號</div><div class="kv-value">${esc(p.parcelId||'—')}</div></div>
         <div class="kv-item"><div class="kv-label">面積</div><div class="kv-value">${p.area?fmt(p.area,2)+' '+(p.areaUnit||'坪'):'—'}</div></div>
-        <div class="kv-item"><div class="kv-label">使用分區</div><div class="kv-value">${esc(p.zoning||'—')}</div></div>
+        <div class="kv-item"><div class="kv-label">地目</div><div class="kv-value">${esc(p.zoning||'—')}</div></div>
         <div class="kv-item"><div class="kv-label">目前所有權人</div><div class="kv-value">${esc(currentOwner(p))}</div></div>
         <div class="kv-item"><div class="kv-label">取得日期</div><div class="kv-value">${esc(p.acquireDate||'—')}</div></div>
         <div class="kv-item"><div class="kv-label">購置成本</div><div class="kv-value">${money(totalPurchase(p))}</div></div>
@@ -727,12 +758,13 @@ function renderDetail(main){
       ${p.notes?`<div style="margin-top:12px;padding-top:10px;border-top:1px dashed var(--line);font-size:13px;color:var(--ink-soft)">📝 ${esc(p.notes)}</div>`:''}
     </div>
 
-    <!-- 所有權人變更歷程 -->
+    <!-- 所有權人變更歷程 (由買賣紀錄自動衍生) -->
     <div class="card">
       <div class="card-head">
         <div class="card-title">所有權人變更歷程</div>
-        ${isOwner()?`<button class="btn btn-sm" onclick="openOwnerForm('${p.id}')">＋ 新增變更</button>`:''}
+        ${isOwner()?`<button class="btn btn-sm" onclick="openTxForm('${p.id}')">＋ 新增買賣/移轉</button>`:''}
       </div>
+      <div class="field-hint" style="margin-bottom:8px">此清單由「買賣/移轉紀錄」自動產生,請從買賣紀錄編輯。</div>
       ${renderOwnerHistory(p)}
     </div>
 
@@ -766,20 +798,37 @@ function renderDetail(main){
 }
 
 function renderOwnerHistory(p){
+  // 把同一筆 tx 的多位共有人聚合在同一列顯示
   const hist = [...(p.ownerHistory||[])].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
   if(!hist.length) return '<div class="empty">尚無紀錄</div>';
+  // 以 txId 為主,沒 txId 的視為獨立(舊資料)
+  const groups = {};
+  const order = [];
+  hist.forEach(h=>{
+    const key = h.txId || h.id;
+    if(!groups[key]){ groups[key] = []; order.push(key); }
+    groups[key].push(h);
+  });
   return `<div class="table-wrap"><table>
-    <thead><tr><th>日期</th><th>所有權人</th><th>持分</th><th>方式</th><th>備註</th><th></th></tr></thead>
-    <tbody>${hist.map(h=>`<tr>
-      <td>${esc(h.date||'')}</td>
-      <td><strong>${esc(h.name||'')}</strong></td>
-      <td>${shareText(h.share)}</td>
-      <td>${esc(h.method||'—')}</td>
-      <td style="font-size:11px">${esc(h.notes||'')}</td>
-      <td class="row-actions">${isOwner()?`
-        <button class="btn btn-sm btn-ghost" onclick="openOwnerForm('${p.id}','${h.id}')">編輯</button>
-        <button class="btn btn-sm btn-ghost text-red" onclick="deleteOwner('${p.id}','${h.id}')">刪除</button>`:''}</td>
-    </tr>`).join('')}</tbody>
+    <thead><tr><th>日期</th><th>所有權人(持分)</th><th>方式</th><th>備註</th><th></th></tr></thead>
+    <tbody>${order.map(key=>{
+      const rows = groups[key];
+      const first = rows[0];
+      const isAuto = first.auto;
+      const txId = first.txId;
+      const ownersHtml = rows.map(h=>`<strong>${esc(h.name||'')}</strong> ${h.share?'<span class="text-muted">('+shareText(h.share)+')</span>':'<span class="text-muted">(全部)</span>'}`).join('、');
+      return `<tr>
+        <td>${esc(first.date||'')}</td>
+        <td>${ownersHtml}</td>
+        <td>${esc(first.method||'—')}</td>
+        <td style="font-size:11px">${esc(first.notes||'')}</td>
+        <td class="row-actions">${isOwner()?(isAuto&&txId?`
+          <button class="btn btn-sm btn-ghost" onclick="openTxForm('${p.id}','${txId}')">編輯買賣</button>
+          <button class="btn btn-sm btn-ghost text-red" onclick="deleteTx('${p.id}','${txId}')">刪除</button>`:`
+          <button class="btn btn-sm btn-ghost" onclick="openOwnerForm('${p.id}','${first.id}')">編輯</button>
+          <button class="btn btn-sm btn-ghost text-red" onclick="deleteOwner('${p.id}','${first.id}')">刪除</button>`):''}</td>
+      </tr>`;
+    }).join('')}</tbody>
   </table></div>`;
 }
 
@@ -787,18 +836,20 @@ function renderTxList(p){
   const list = [...(p.transactions||[])].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
   if(!list.length) return '<div class="empty">尚無紀錄</div>';
   return `<div class="table-wrap"><table>
-    <thead><tr><th>日期</th><th>類型</th><th>對象</th><th>持分</th>
+    <thead><tr><th>日期</th><th>類型</th><th>對象</th><th>本次持分</th><th>變更後所有權人</th>
       <th class="num">成交價</th><th class="num">代書</th><th class="num">過戶</th>
       <th class="num">手續費</th><th class="num">銀行貸款</th><th class="num">其他</th>
       <th class="num">小計</th><th>備註</th><th></th></tr></thead>
     <tbody>${list.map(t=>{
       const f = t.fees||{};
       const subtotal = Number(t.price||0)+sumFees(t);
+      const newOwnersText = (t.newOwners||[]).filter(o=>o.name).map(o=>`${esc(o.name)}${o.share?'('+shareText(o.share)+')':''}`).join('、')||'—';
       return `<tr>
         <td>${esc(t.date||'')}</td>
         <td>${txTypeLabel(t.type)}</td>
         <td>${esc(t.counterparty||'—')}</td>
         <td>${t.share?shareText(t.share):'—'}</td>
+        <td style="font-size:12px">${newOwnersText}</td>
         <td class="num">${money(t.price)}</td>
         <td class="num">${money(f.agent)}</td>
         <td class="num">${money(f.transfer)}</td>
@@ -919,8 +970,8 @@ function openPropertyForm(id){
           <input id="f_address" value="${esc(p?p.address:'')}" placeholder="例如:台北市大安區大安路1段100號"></div>
         <div class="field"><label class="field-label">地段地號 / 建號</label>
           <input id="f_parcel" value="${esc(p?p.parcelId:'')}" placeholder="例如:大安段二小段1234-5"></div>
-        <div class="field"><label class="field-label">使用分區</label>
-          <input id="f_zoning" value="${esc(p?p.zoning:'')}" placeholder="住一/商三/田/建..."></div>
+        <div class="field"><label class="field-label">地目</label>
+          <input id="f_zoning" value="${esc(p?p.zoning:'')}" placeholder="例如:建、田、旱、林、雜、原(住宅區/商業區)..."></div>
         <div class="field"><label class="field-label">面積</label>
           <input type="number" step="0.01" id="f_area" value="${p&&p.area!=null?p.area:''}"></div>
         <div class="field"><label class="field-label">面積單位</label>
@@ -932,7 +983,7 @@ function openPropertyForm(id){
         <div class="field"><label class="field-label">取得日期</label>
           <input type="date" id="f_acquire" value="${esc(p?p.acquireDate:'')}"></div>
         <div class="field"><label class="field-label">初始所有權人</label>
-          <input id="f_owner" value="${esc(p?p.owner:'')}" placeholder="可不填,改用「所有權人變更歷程」管理"></div>
+          <input id="f_owner" value="${esc(p?p.owner:'')}" placeholder="顯示用,實際變更請從「買賣/移轉紀錄」管理"></div>
         <div class="field full">
           <label class="field-label">關聯權狀 (土地⇄建物配對)</label>
           <div class="field-hint">勾選同一塊不動產的另一張權狀,系統會合併顯示</div>
@@ -1094,7 +1145,7 @@ function deleteOwner(propId, ownerId){
   render();
 }
 
-// -------- 買賣紀錄表單 --------
+// -------- 買賣紀錄表單(同時管理所有權人變更) --------
 function openTxForm(propId, txId){
   if(!requireOwner()) return;
   const p = (DB.properties||[]).find(x=>x.id===propId);
@@ -1102,30 +1153,39 @@ function openTxForm(propId, txId){
   const t = txId ? (p.transactions||[]).find(x=>x.id===txId) : null;
   const f = (t&&t.fees)||{};
   const share = (t&&t.share)||{num:'',den:''};
+  // 變更後所有權人(支援多人共持)
+  const newOwners = (t&&t.newOwners)||[{name:'',num:'',den:''}];
 
   showModal(`
     <div class="modal-head">
-      <div class="modal-title">${t?'編輯':'新增'}買賣紀錄 — ${esc(p.name)}</div>
+      <div class="modal-title">${t?'編輯':'新增'}買賣 / 移轉紀錄 — ${esc(p.name)}</div>
       <button class="modal-close" onclick="closeModal()">×</button>
     </div>
     <div class="modal-body">
       <div class="form-grid">
         <div class="field"><label class="field-label">類型<span class="req">*</span></label>
           <select id="t_type">
-            ${[['buy','買進'],['sell','賣出'],['gift-in','受贈(入)'],['gift-out','贈與(出)'],['transfer-in','移轉(入)'],['transfer-out','移轉(出)'],['split','持分拆'],['merge','持分併']].map(([v,l])=>`<option value="${v}" ${t&&t.type===v?'selected':''}>${l}</option>`).join('')}
+            ${[['buy','買進'],['sell','賣出'],['gift-in','受贈(入)'],['gift-out','贈與(出)'],['transfer-in','移轉(入)'],['transfer-out','移轉(出)'],['inherit','繼承'],['split','持分拆'],['merge','持分併']].map(([v,l])=>`<option value="${v}" ${t&&t.type===v?'selected':''}>${l}</option>`).join('')}
           </select></div>
         <div class="field"><label class="field-label">日期<span class="req">*</span></label>
           <input type="date" id="t_date" value="${esc((t&&t.date)||todayISO())}"></div>
-        <div class="field"><label class="field-label">對象 (買方/賣方/受贈人)</label>
+        <div class="field"><label class="field-label">對象 (賣方/買方/贈與人...)</label>
           <input id="t_party" value="${esc(t?t.counterparty:'')}"></div>
-        <div class="field"><label class="field-label">持分(本次移轉)</label>
+        <div class="field"><label class="field-label">本次移轉持分</label>
           <div style="display:flex;gap:6px;align-items:center">
             <input type="number" id="t_num" value="${share.num||''}" placeholder="分子" style="flex:1">
             <span>/</span>
             <input type="number" id="t_den" value="${share.den||''}" placeholder="分母" style="flex:1">
           </div>
+          <div class="field-hint">留空表示全部</div>
         </div>
       </div>
+
+      <div class="section-sub">變更後 所有權人(此筆交易完成後的登記狀態)</div>
+      <div class="field-hint" style="margin-bottom:6px">列出此筆交易完成後,權狀上登記的所有權人。系統會同步更新「所有權人變更歷程」。</div>
+      <div id="ownersList"></div>
+      <button class="btn btn-sm" onclick="addOwnerRow()" style="margin-top:6px">＋ 新增共有人</button>
+
       <div class="section-sub">金額明細</div>
       <div class="form-grid col-3">
         <div class="field"><label class="field-label">成交價</label>
@@ -1153,6 +1213,31 @@ function openTxForm(propId, txId){
       <button class="btn btn-primary" onclick="saveTx('${propId}','${txId||''}')">儲存</button>
     </div>
   `);
+  // 動態渲染所有權人列
+  window._txNewOwners = newOwners.map(o=>({...o}));
+  renderOwnerRows();
+}
+
+function renderOwnerRows(){
+  const list = window._txNewOwners||[];
+  const html = list.map((o,i)=>`
+    <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
+      <input value="${esc(o.name||'')}" placeholder="姓名" style="flex:2" oninput="window._txNewOwners[${i}].name=this.value">
+      <input type="number" value="${o.num||''}" placeholder="分子" style="flex:1" oninput="window._txNewOwners[${i}].num=this.value">
+      <span>/</span>
+      <input type="number" value="${o.den||''}" placeholder="分母" style="flex:1" oninput="window._txNewOwners[${i}].den=this.value">
+      <button class="btn btn-sm btn-ghost text-red" onclick="removeOwnerRow(${i})" ${list.length===1?'disabled':''}>×</button>
+    </div>`).join('');
+  document.getElementById('ownersList').innerHTML = html;
+}
+function addOwnerRow(){
+  window._txNewOwners.push({name:'',num:'',den:''});
+  renderOwnerRows();
+}
+function removeOwnerRow(i){
+  window._txNewOwners.splice(i,1);
+  if(window._txNewOwners.length===0) window._txNewOwners.push({name:'',num:'',den:''});
+  renderOwnerRows();
 }
 
 function saveTx(propId, txId){
@@ -1160,12 +1245,18 @@ function saveTx(propId, txId){
   if(!p) return;
   const num = getVal('t_num'), den = getVal('t_den');
   const share = (num&&den)?{num:Number(num),den:Number(den)}:null;
+  // 收集變更後所有權人
+  const newOwners = (window._txNewOwners||[]).filter(o=>(o.name||'').trim()).map(o=>({
+    name: o.name.trim(),
+    share: (o.num&&o.den)?{num:Number(o.num),den:Number(o.den)}:null
+  }));
   const rec = {
     id: txId||uid(),
     type: getVal('t_type'),
     date: getVal('t_date'),
     counterparty: getVal('t_party'),
     share,
+    newOwners,
     price: getNum('t_price'),
     fees: {
       agent: getNum('t_agent'),
@@ -1184,17 +1275,41 @@ function saveTx(propId, txId){
   } else {
     p.transactions.push(rec);
   }
+  // 同步更新 ownerHistory:每位 newOwner 對應一筆 ownerHistory,以 txId+index 作關聯
+  syncOwnerHistoryFromTx(p, rec);
   saveDB();
   closeModal();
   toast('已儲存','success');
+  // 編輯後若有 txId 維持當前頁,新增則回到 detail
   render();
+}
+
+// 從一筆 transaction 同步建立/更新 ownerHistory
+function syncOwnerHistoryFromTx(p, t){
+  p.ownerHistory = p.ownerHistory||[];
+  // 先移除這筆 tx 對應的舊紀錄
+  p.ownerHistory = p.ownerHistory.filter(h=>h.txId!==t.id);
+  // 依新的 newOwners 重新加入
+  (t.newOwners||[]).forEach((o,i)=>{
+    p.ownerHistory.push({
+      id: t.id+'_'+i,
+      txId: t.id,
+      date: t.date,
+      name: o.name,
+      share: o.share,
+      method: txTypeLabel(t.type),
+      notes: t.counterparty?`對象:${t.counterparty}`:'',
+      auto: true  // 標記為從交易自動產生
+    });
+  });
 }
 
 function deleteTx(propId, txId){
   if(!requireOwner()) return;
-  if(!confirm('確定刪除這筆紀錄?')) return;
+  if(!confirm('確定刪除這筆紀錄?(對應的所有權人變更也會被清除)')) return;
   const p = (DB.properties||[]).find(x=>x.id===propId);
   p.transactions = (p.transactions||[]).filter(x=>x.id!==txId);
+  p.ownerHistory = (p.ownerHistory||[]).filter(h=>h.txId!==txId);
   saveDB(); render();
 }
 
