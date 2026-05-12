@@ -1091,17 +1091,28 @@ function openPropertyForm(id){
     </div>
     <div class="modal-body">
       <div class="form-grid">
+        <!-- 列 1: 類型 / 名稱 -->
         <div class="field"><label class="field-label">類型<span class="req">*</span></label>
           <select id="f_type">
             <option value="land" ${p&&p.type===TYPE_LAND?'selected':''}>土地</option>
             <option value="building" ${p&&p.type===TYPE_BUILDING?'selected':''}>建物</option>
           </select></div>
+        <div class="field"><label class="field-label">名稱 / 簡稱</label>
+          <input id="f_name" value="${esc(p?p.name:'')}" placeholder="自動產生,可手動覆寫"></div>
+
+        <!-- 列 2: 取得年度 / 取得日期 -->
         <div class="field"><label class="field-label">取得年度 (民國)</label>
           <input type="number" id="f_year" value="${p&&p.year!=null?p.year:''}" placeholder="例如:104"></div>
+        <div class="field"><label class="field-label">取得日期</label>
+          <input type="date" id="f_acquire" value="${esc(p?p.acquireDate:'')}"></div>
+
+        <!-- 列 3: 地段 / 地號 -->
         <div class="field"><label class="field-label">地段<span class="req">*</span></label>
-          <input id="f_section" value="${esc(p?p.section||p.name||'':'')}" placeholder="例如:林森段、太昌段、石壁段"></div>
+          <input id="f_section" value="${esc(p?p.section||'':'')}" placeholder="例如:林森段、太昌段、石壁段"></div>
         <div class="field"><label class="field-label" id="f_parcelLabel">地號 / 建號<span class="req">*</span></label>
           <input id="f_parcel" value="${esc(p?p.parcelId:'')}" placeholder="例如:1650、1738-17、2727"></div>
+
+        <!-- 列 4: 面積 / 面積單位 -->
         <div class="field"><label class="field-label">面積</label>
           <input type="number" step="0.01" id="f_area" value="${p&&p.area!=null?p.area:''}"></div>
         <div class="field"><label class="field-label">面積單位</label>
@@ -1110,20 +1121,31 @@ function openPropertyForm(id){
             <option value="坪" ${p&&p.areaUnit==='坪'?'selected':''}>坪</option>
             <option value="平方公尺" ${p&&p.areaUnit==='平方公尺'?'selected':''}>平方公尺</option>
           </select></div>
-        <div class="field"><label class="field-label">地目 / 用途</label>
-          <input id="f_zoning" value="${esc(p?p.zoning:'')}" placeholder="例如:建、田、旱、林、道、雜..."></div>
-        <div class="field full"><label class="field-label">地址 (坐落) — 建物用</label>
-          <input id="f_address" value="${esc(p?p.address:'')}" placeholder="例如:延平街148巷2弄10號2樓之2"></div>
-        <div class="field"><label class="field-label">取得日期</label>
-          <input type="date" id="f_acquire" value="${esc(p?p.acquireDate:'')}"></div>
-        <div class="field"><label class="field-label">名稱 / 簡稱</label>
-          <input id="f_name" value="${esc(p?p.name:'')}" placeholder="自動產生,可手動覆寫"></div>
+
+        <!-- 列 5: 地目(縮小) / 地址(放大) — 用 full 跨欄,內部分配 1:4 -->
+        <div class="field full" style="display:grid;grid-template-columns:1fr 4fr;gap:16px">
+          <div>
+            <label class="field-label">地目 / 用途</label>
+            <input id="f_zoning" value="${esc(p?p.zoning:'')}" placeholder="建、田、旱、林、道..." style="width:100%">
+          </div>
+          <div>
+            <label class="field-label">地址 (坐落) — 建物用</label>
+            <input id="f_address" value="${esc(p?p.address:'')}" placeholder="例如:延平街148巷2弄10號2樓之2" style="width:100%">
+          </div>
+        </div>
+
+        <!-- 列 6: 目前所有權人 / 持分 — 並排呈現 -->
         <div class="field full">
           <label class="field-label">目前所有權人 / 持分</label>
-          <div class="field-hint">列出此權狀目前登記的所有權人(可多位共有)。若日後有買賣/贈與,請另外從「買賣/移轉紀錄」新增,系統會自動更新所有權人變更歷程。</div>
+          <div class="field-hint">列出此權狀目前登記的所有權人(可多位共有)。日後買賣/贈與請從「買賣/移轉紀錄」新增,系統會自動更新所有權人變更歷程。</div>
+          <!-- 標頭欄位 -->
+          <div style="display:grid;grid-template-columns:2fr 1.5fr 40px;gap:6px;margin-top:6px;padding:0 2px;font-size:11px;color:var(--muted);letter-spacing:.05em">
+            <div>所有權人</div><div>持分 (分子 / 分母)</div><div></div>
+          </div>
           <div id="propOwnersList"></div>
           <button type="button" class="btn btn-sm" onclick="addPropOwnerRow()" style="margin-top:6px">＋ 新增共有人</button>
         </div>
+
         <div class="field full">
           <label class="field-label">不動產組 (同一塊地的土地+建物會合併顯示)</label>
           <div class="field-hint">同一「組」會在「土地建物總表」並排顯示。例如:幾筆土地對應一棟建物</div>
@@ -1188,11 +1210,13 @@ function openPropertyForm(id){
 function renderPropOwnerRows(){
   const list = window._propOwners||[];
   const html = list.map((o,i)=>`
-    <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
-      <input value="${esc(o.name||'')}" placeholder="姓名" style="flex:2" oninput="window._propOwners[${i}].name=this.value">
-      <input type="number" value="${o.num||''}" placeholder="分子" style="flex:1" oninput="window._propOwners[${i}].num=this.value">
-      <span>/</span>
-      <input type="number" value="${o.den||''}" placeholder="分母" style="flex:1" oninput="window._propOwners[${i}].den=this.value">
+    <div style="display:grid;grid-template-columns:2fr 1.5fr 40px;gap:6px;align-items:center;margin-bottom:6px">
+      <input value="${esc(o.name||'')}" placeholder="姓名" oninput="window._propOwners[${i}].name=this.value">
+      <div style="display:flex;gap:4px;align-items:center">
+        <input type="number" value="${o.num||''}" placeholder="分子" style="flex:1;min-width:0" oninput="window._propOwners[${i}].num=this.value">
+        <span style="color:var(--muted)">/</span>
+        <input type="number" value="${o.den||''}" placeholder="分母" style="flex:1;min-width:0" oninput="window._propOwners[${i}].den=this.value">
+      </div>
       <button type="button" class="btn btn-sm btn-ghost text-red" onclick="removePropOwnerRow(${i})" ${list.length===1?'disabled':''}>×</button>
     </div>`).join('');
   const el = document.getElementById('propOwnersList');
@@ -1480,11 +1504,13 @@ function openTxForm(propId, txId){
 function renderOwnerRows(){
   const list = window._txNewOwners||[];
   const html = list.map((o,i)=>`
-    <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
-      <input value="${esc(o.name||'')}" placeholder="姓名" style="flex:2" oninput="window._txNewOwners[${i}].name=this.value">
-      <input type="number" value="${o.num||''}" placeholder="分子" style="flex:1" oninput="window._txNewOwners[${i}].num=this.value">
-      <span>/</span>
-      <input type="number" value="${o.den||''}" placeholder="分母" style="flex:1" oninput="window._txNewOwners[${i}].den=this.value">
+    <div style="display:grid;grid-template-columns:2fr 1.5fr 40px;gap:6px;align-items:center;margin-bottom:6px">
+      <input value="${esc(o.name||'')}" placeholder="姓名" oninput="window._txNewOwners[${i}].name=this.value">
+      <div style="display:flex;gap:4px;align-items:center">
+        <input type="number" value="${o.num||''}" placeholder="分子" style="flex:1;min-width:0" oninput="window._txNewOwners[${i}].num=this.value">
+        <span style="color:var(--muted)">/</span>
+        <input type="number" value="${o.den||''}" placeholder="分母" style="flex:1;min-width:0" oninput="window._txNewOwners[${i}].den=this.value">
+      </div>
       <button class="btn btn-sm btn-ghost text-red" onclick="removeOwnerRow(${i})" ${list.length===1?'disabled':''}>×</button>
     </div>`).join('');
   document.getElementById('ownersList').innerHTML = html;
